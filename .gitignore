@@ -1,0 +1,64 @@
+# Ignore build directories
+/build/
+/build-*/
+
+# CMake generated files
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+Makefile
+
+# Output binaries
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+*.lo
+*.la
+
+# IDE specific files
+.vscode/
+.idea/
+*.iml
+
+# macOS specific files
+.DS_Store
+
+# Windows specific files
+Thumbs.db
+desktop.ini
+
+# Generated documentation
+/docs/doxygen/
+*.html
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# Common shell or environment scripts
+*.sh
+*.bat
+*.cmd
+
+# Ignore environment settings files
+.env
+.env.*
+
+# Ignore by-products or auto-generated files from scripts or other tooling
+*.gen.*
+*.in
+
+# Ignore dependency directories
+/deps/
+/vendor/
