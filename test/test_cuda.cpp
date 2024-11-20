@@ -35,3 +35,18 @@ TEST_CASE("FitCudaReduction") {
   double res = fitter.reduction(v.data(), v.size());
   CHECK_THAT(res, Catch::Matchers::WithinAbs(ref, tol));
 }
+
+TEST_CASE("FitCudaDifferentParameters") {
+  int n = 100;
+  double a = -5;  // Negative intercept
+  double b = 3.5; // Fractional slope
+  std::vector<double> data_x;
+  std::vector<double> data_y;
+  experiment_basic(data_x, data_y, n, 0, 1, a, b);
+
+  FitResult res;
+  FitCuda fitter;
+  fitter.fit(data_x.data(), data_y.data(), n, res);
+  CHECK_THAT(res.a, Catch::Matchers::WithinAbs(a, tol));
+  CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, tol));
+}
