@@ -10,7 +10,7 @@
 #define COARSE_FACTOR 8
 
 // Patron de réduction vu en classe
-__global__ void kernel_sum_coarse(double* input, double* result, int n) {
+__global__ void kernel_sum_coarse(double* input, double* result, int size) {
   // mémoire partagée par le warp
   // doit être allouée au lancement
   // on obtient en pratique le début de cet espace
@@ -20,11 +20,15 @@ __global__ void kernel_sum_coarse(double* input, double* result, int n) {
   unsigned int i = segment + threadIdx.x;
   unsigned int t = threadIdx.x;
 
+
+  // input_s[t] = (i < size) ? input[i] : 0.0;
+
+
   // Somme des éléments jusqu'à obtenir un seul bloc
-  double sum_local = (i < n) ? input[i] : 0.0;
+  double sum_local = (i < size) ? input[i] : 0.0;
   for (unsigned int tile = 1; tile < COARSE_FACTOR * 2; tile++) {
     unsigned int src = i + tile * blockDim.x;
-    if (src < n) {
+    if (src < size) {
       sum_local += input[src];
     }
   }
@@ -58,10 +62,22 @@ void FitCuda::fit(double* x, double* y, int n, FitResult& res) {
   double a = 0;
   double b = 0;
   double r = 0;
-  double xmean = 0.0;
-  double ymean = 0.0;
+  double sx = 0.0;
+  double sy = 0.0;
 
-  // À COMPLÉTER
+  sx = reduction(x, n);
+  sy = reduction(y, n);
+
+
+
+  double ss = n;
+  double xmean = sx / n;
+  double ymean = sy / n;
+
+  double ssxym = 0.0;
+  double ssxm = 0.0;
+  double ssym = 0.0;
+  double t, u;
 
   res.a = a;
   res.b = b;
@@ -71,23 +87,23 @@ void FitCuda::fit(double* x, double* y, int n, FitResult& res) {
   return;
 }
 
-double FitCuda::reduction(double* v, int n) {
-  double res;
-  double* v_d;
-  double* res_d;
-  cudaMalloc(&v_d, n * sizeof(double));
-  cudaMalloc(&res_d, sizeof(double));
+double FitCuda::reduction(double* array, int size) {
+  double result;
+  double* array_d;
+  double* result_d;
+  cudaMalloc(&array_d, size * sizeof(double));
+  cudaMalloc(&result_d, sizeof(double));
 
-  cudaMemcpy(v_d, v, n * sizeof(double), cudaMemcpyHostToDevice);
-  cudaMemset(res_d, 0, sizeof(double));
+  cudaMemcpy(array_d, array, size * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemset(result_d, 0, sizeof(double));
 
   // Pour la fraction de GPU V100
   int blockDim = 1024;
   int gridDim = 80;
   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
-  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(v_d, res_d, n);
+  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(array_d, result_d, size);
   cudaCheck(cudaDeviceSynchronize());
 
-  cudaMemcpy(&res, res_d, sizeof(double), cudaMemcpyDeviceToHost);
-  return res;
+  cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+  return result;
 }
