@@ -15,7 +15,6 @@ FitSerial::~FitSerial() {}
 void FitSerial::fit(double* x, double* y, int n, FitResult& res) {
   double a = 0;
   double b = 0;
-  double chi2 = 0;
   double sx = 0;
   double sy = 0;
   for (int i = 0; i < n; i++) {

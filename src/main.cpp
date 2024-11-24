@@ -41,7 +41,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Construire l'arbre VP
   IFitBase* fitter;
   if (method == 0) {
     fitter = new FitSerial();

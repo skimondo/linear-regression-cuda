@@ -73,21 +73,21 @@ void FitCuda::fit(double* x, double* y, int n, FitResult& res) {
 
 double FitCuda::reduction(double* v, int n) {
   double res;
-  double* v_dev;
-  double* res_dev;
-  cudaMalloc(&v_dev, n * sizeof(double));
-  cudaMalloc(&res_dev, sizeof(double));
+  double* v_d;
+  double* res_d;
+  cudaMalloc(&v_d, n * sizeof(double));
+  cudaMalloc(&res_d, sizeof(double));
 
-  cudaMemcpy(v_dev, v, n * sizeof(double), cudaMemcpyHostToDevice);
-  cudaMemset(res_dev, 0, sizeof(double));
+  cudaMemcpy(v_d, v, n * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemset(res_d, 0, sizeof(double));
 
   // Pour la fraction de GPU V100
   int blockDim = 1024;
   int gridDim = 80;
   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
-  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(v_dev, res_dev, n);
+  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(v_d, res_d, n);
   cudaCheck(cudaDeviceSynchronize());
 
-  cudaMemcpy(&res, res_dev, sizeof(double), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&res, res_d, sizeof(double), cudaMemcpyDeviceToHost);
   return res;
 }
