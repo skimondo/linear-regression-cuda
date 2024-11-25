@@ -82,7 +82,7 @@ TEST_CASE("FitCudaValidation4") {
 }
 
 TEST_CASE("FitCudaValidation5") {
-  int n = 10000000;
+  int n = 100000000;
   double a = 10;  // ordonnée à l'origine
   double b = 2;   // pente
   std::vector<double> data_x;

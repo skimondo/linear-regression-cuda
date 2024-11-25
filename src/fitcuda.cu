@@ -147,8 +147,6 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   double ssxym = 0.0;
   double ssxm = 0.0;
   double ssym = 0.0;
-  double t = 0.0;
-  double u = 0.0;
 
 
   // SIMPLE REDUCTION PART 
@@ -172,6 +170,7 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
 
   ssxym = reduction_two_dep(xarray, xmean, yarray, ymean, size);
 
+  // END OF REDUCTION WITH TWO DEPENDENCIES PART
 
   b = ssxym / ssxm;
   a = (sy - sx * b) / ss;
@@ -210,12 +209,17 @@ double FitCuda::reduction(double* array, int size) {
 
   // Pour la fraction de GPU V100
   int blockDim = 1024;
-  int gridDim = 80;
+  // int gridDim = 80;
+  int gridDim = (size + blockDim * COARSE_FACTOR * 2 - 1) / (blockDim * COARSE_FACTOR * 2);
   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
   kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(array_d, result_d, size);
   cudaCheck(cudaDeviceSynchronize());
 
   cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+
+  cudaFree(array_d);
+  cudaFree(result_d);
+
   return result;
 }
 
@@ -241,6 +245,11 @@ double FitCuda::reduction_one_dep(double* xArray, double xmean, int size) {
   cudaCheck(cudaDeviceSynchronize());
 
   cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+
+  cudaFree(xArray_d);
+  cudaFree(xmean_d);
+  cudaFree(result_d);
+
   return result;
 }
 
@@ -271,5 +280,12 @@ double FitCuda::reduction_two_dep(double* xArray, double xmean, double* yArray, 
   cudaCheck(cudaDeviceSynchronize());
 
   cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+
+  cudaFree(xArray_d);
+  cudaFree(xmean_d);
+  cudaFree(yArray_d);
+  cudaFree(ymean_d);
+  cudaFree(result_d);
+
   return result;
 }
