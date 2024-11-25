@@ -36,5 +36,7 @@ void experiment_noisy(std::vector<double>& x,  //
   for (int i = 0; i < n; i++) {
     x[i] = i * step;
     y[i] = a * x[i] + b + noise(rng);
+    // y[i] = b * x[i] + a + noise(rng);
+
   }
 }

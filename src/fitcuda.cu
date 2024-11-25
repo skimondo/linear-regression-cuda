@@ -9,8 +9,6 @@
 
 #define COARSE_FACTOR 8
 #define THREADS_PER_BLOCK 1024
-#define GRID_DIMENSION 80
-
 
 // Patron de réduction vu en classe
 __global__ void kernel_sum_coarse(double* input, double* result, int size) {
@@ -147,9 +145,6 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   double ssxym = 0.0;
   double ssxm = 0.0;
   double ssym = 0.0;
-  double t = 0.0;
-  double u = 0.0;
-
 
   // SIMPLE REDUCTION PART 
 
@@ -173,7 +168,8 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
 
   // Pour la fraction de GPU V100
   int blockDim = THREADS_PER_BLOCK;
-  int gridDim = GRID_DIMENSION;
+  int gridDim = (size + blockDim * COARSE_FACTOR * 2 - 1) / (blockDim * COARSE_FACTOR * 2);
+  // int gridDim = GRID_DIMENSION
   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
   kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(xarray_d, result_d, size);
   cudaCheck(cudaDeviceSynchronize());

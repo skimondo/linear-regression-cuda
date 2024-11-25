@@ -36,7 +36,7 @@ TEST_CASE("FitCudaReduction") {
   CHECK_THAT(res, Catch::Matchers::WithinAbs(ref, tol));
 }
 
-TEST_CASE("FitCudaValidation2") {
+TEST_CASE("FitCudaValidationBig") {
   int n = 10000;
   double a = 10;  // ordonnée à l'origine
   double b = 2;   // pente
@@ -51,22 +51,7 @@ TEST_CASE("FitCudaValidation2") {
   CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, tol));
 }
 
-TEST_CASE("FitCudaValidation3") {
-  int n = 100000;
-  double a = 10;  // ordonnée à l'origine
-  double b = 2;   // pente
-  std::vector<double> data_x;
-  std::vector<double> data_y;
-  experiment_basic(data_x, data_y, n, 0, 1, a, b);
-
-  FitResult res;
-  FitCuda fitter;
-  fitter.fit(data_x.data(), data_y.data(), n, res);
-  CHECK_THAT(res.a, Catch::Matchers::WithinAbs(a, tol));
-  CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, tol));
-}
-
-TEST_CASE("FitCudaValidation4") {
+TEST_CASE("FitCudaValidationBigger") {
   int n = 1000000;
   double a = 10;  // ordonnée à l'origine
   double b = 2;   // pente
@@ -81,8 +66,8 @@ TEST_CASE("FitCudaValidation4") {
   CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, tol));
 }
 
-TEST_CASE("FitCudaValidation5") {
-  int n = 10000000;
+TEST_CASE("FitCudaValidationBiggest") {
+  int n = 100000000;
   double a = 10;  // ordonnée à l'origine
   double b = 2;   // pente
   std::vector<double> data_x;
@@ -95,3 +80,23 @@ TEST_CASE("FitCudaValidation5") {
   CHECK_THAT(res.a, Catch::Matchers::WithinAbs(a, tol));
   CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, tol));
 }
+
+// Might fail 0.000000001% of the time
+// TEST_CASE("FitCudaValidationNoisyBiggest") {
+//   int n = 1000000;
+//   double a = 10;  // ordonnée à l'origine
+//   double b = 2;   // pente
+//   std::vector<double> data_x;
+//   std::vector<double> data_y;
+
+//   experiment_noisy(data_x, data_y, n, 0, 1, a, b);
+
+//   FitResult res;
+//   FitCuda fitter;
+//   fitter.fit(data_x.data(), data_y.data(), n, res);
+
+//   // Large tolerance due to noise
+//   double noisy_tol = 5.0;
+//   CHECK_THAT(res.a, Catch::Matchers::WithinAbs(a, noisy_tol));
+//   CHECK_THAT(res.b, Catch::Matchers::WithinAbs(b, noisy_tol));
+// }
