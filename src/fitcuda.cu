@@ -153,69 +153,25 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
 
   // SIMPLE REDUCTION PART 
 
-  // double result;
-  double* xarray_d;
-  double* yarray_d;
-  double* xmean_d;
-  double* ymean_d;
-  double* result_d;
-
-  cudaMalloc(&xarray_d, size * sizeof(double));
-  cudaMalloc(&yarray_d, size * sizeof(double));
-  cudaMalloc(&xmean_d, sizeof(double));
-  cudaMalloc(&ymean_d, sizeof(double));
-
-  cudaMalloc(&result_d, sizeof(double));
-
-  cudaMemcpy(xarray_d, xarray, size * sizeof(double), cudaMemcpyHostToDevice);
-  cudaMemcpy(yarray_d, yarray, size * sizeof(double), cudaMemcpyHostToDevice);
-  cudaMemset(result_d, 0, sizeof(double));
-
-  // Pour la fraction de GPU V100
-  int blockDim = THREADS_PER_BLOCK;
-  int gridDim = GRID_DIMENSION;
-  int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
-  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(xarray_d, result_d, size);
-  cudaCheck(cudaDeviceSynchronize());
-  cudaMemcpy(&sx, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemset(result_d, 0, sizeof(double));
-  kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(yarray_d, result_d, size);
-  cudaCheck(cudaDeviceSynchronize());
-  cudaMemcpy(&sy, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemset(result_d, 0, sizeof(double));
+  sx = reduction(xarray, size);
+  sy = reduction(yarray, size);
 
   // END OF SIMPLE REDUCTION PART
-
-  std::cout << "\nsx: " << sx << std::endl;
-  std::cout << "sy: " << sy << std::endl;
 
   xmean = sx / size;
   ymean = sy / size;
 
-  cudaMemcpy(xmean_d, &xmean, sizeof(double), cudaMemcpyHostToDevice);
-  cudaMemcpy(ymean_d, &ymean, sizeof(double), cudaMemcpyHostToDevice);
+  // REDUCTION WITH ONE DEPENDENCY PART
 
-  // ssxm = reduction_one_dep(xarray, xmean, size);
-  kernel_sum_coarse_one_dep<<<gridDim, blockDim, sharedSize>>>(xarray_d, xmean_d, result_d, size);
-  cudaCheck(cudaDeviceSynchronize());
-  cudaMemcpy(&ssxm, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemset(result_d, 0, sizeof(double));
+  ssxm = reduction_one_dep(xarray, xmean, size);
+  ssym = reduction_one_dep(yarray, ymean, size);
 
-  // ssym = reduction_one_dep(yarray, ymean, size);
-  kernel_sum_coarse_one_dep<<<gridDim, blockDim, sharedSize>>>(yarray_d, ymean_d, result_d, size);
-  cudaCheck(cudaDeviceSynchronize());
-  cudaMemcpy(&ssym, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemset(result_d, 0, sizeof(double));
+  // END OF REDUCTION WITH ONE DEPENDENCY PART
 
-  // ssxym = reduction_two_dep(xarray, xmean, yarray, ymean, size);
-  kernel_sum_coarse_two_dep<<<gridDim, blockDim, sharedSize>>>(xarray_d, xmean_d, yarray_d, ymean_d, result_d, size);
-  cudaCheck(cudaDeviceSynchronize());
-  cudaMemcpy(&ssxym, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-  cudaMemset(result_d, 0, sizeof(double));
+  // REDUCTION WITH TWO DEPENDENCIES PART
 
-  std::cout << "\nssxm: " << ssxm << std::endl;
-  std::cout << "ssym: " << ssym << std::endl;
-  std::cout << "ssxym: " << ssxym << std::endl;
+  ssxym = reduction_two_dep(xarray, xmean, yarray, ymean, size);
+
 
   b = ssxym / ssxm;
   a = (sy - sx * b) / ss;
@@ -239,12 +195,6 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   res.r = r;
   res.xmean = xmean;
   res.ymean = ymean;
-
-  cudaFree(xarray_d);
-  cudaFree(yarray_d);
-  cudaFree(xmean_d);
-  cudaFree(ymean_d);
-  cudaFree(result_d);
 }
 
 
@@ -270,27 +220,56 @@ double FitCuda::reduction(double* array, int size) {
 }
 
 
-// double FitCuda::reduction_one_dep(double* xArray, double xmean, int size) {
-//   double result;
-//   double* xArray_d;
-//   double* xmean_d;
-//   double* result_d;
-//   cudaMalloc(&xArray_d, size * sizeof(double));
-//   cudaMalloc(&xmean_d, sizeof(double));
-//   cudaMalloc(&result_d, sizeof(double));
+double FitCuda::reduction_one_dep(double* xArray, double xmean, int size) {
+  double result;
+  double* xArray_d;
+  double* xmean_d;
+  double* result_d;
+  cudaMalloc(&xArray_d, size * sizeof(double));
+  cudaMalloc(&xmean_d, sizeof(double));
+  cudaMalloc(&result_d, sizeof(double));
 
-//   cudaMemcpy(xArray_d, xArray, size * sizeof(double), cudaMemcpyHostToDevice);
-//   cudaMemcpy(xmean_d, &xmean, sizeof(double), cudaMemcpyHostToDevice);
-//   cudaMemset(result_d, 0, sizeof(double));
+  cudaMemcpy(xArray_d, xArray, size * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(xmean_d, &xmean, sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemset(result_d, 0, sizeof(double));
 
-//   // Pour la fraction de GPU V100
-//   int blockDim = 1024;
-//   int gridDim = 80;
-//   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
-//   kernel_sum_coarse_one_dep<<<gridDim, blockDim, sharedSize>>>(xArray_d, xmean_d, result_d, size);
-//   cudaCheck(cudaDeviceSynchronize());
+  // Pour la fraction de GPU V100
+  int blockDim = 1024;
+  int gridDim = 80;
+  int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
+  kernel_sum_coarse_one_dep<<<gridDim, blockDim, sharedSize>>>(xArray_d, xmean_d, result_d, size);
+  cudaCheck(cudaDeviceSynchronize());
 
-//   cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
-//   return result;
-// }
+  cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+  return result;
+}
 
+double FitCuda::reduction_two_dep(double* xArray, double xmean, double* yArray, double ymean, int size) {
+  double result;
+  double* xArray_d;
+  double* xmean_d;
+  double* yArray_d;
+  double* ymean_d;
+  double* result_d;
+  cudaMalloc(&xArray_d, size * sizeof(double));
+  cudaMalloc(&xmean_d, sizeof(double));
+  cudaMalloc(&yArray_d, size * sizeof(double));
+  cudaMalloc(&ymean_d, sizeof(double));
+  cudaMalloc(&result_d, sizeof(double));
+
+  cudaMemcpy(xArray_d, xArray, size * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(xmean_d, &xmean, sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(yArray_d, yArray, size * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(ymean_d, &ymean, sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemset(result_d, 0, sizeof(double));
+
+  // Pour la fraction de GPU V100
+  int blockDim = 1024;
+  int gridDim = 80;
+  int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
+  kernel_sum_coarse_two_dep<<<gridDim, blockDim, sharedSize>>>(xArray_d, xmean_d, yArray_d, ymean_d, result_d, size);
+  cudaCheck(cudaDeviceSynchronize());
+
+  cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
+  return result;
+}
