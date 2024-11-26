@@ -9,6 +9,7 @@
 
 #define COARSE_FACTOR 8
 #define THREADS_PER_BLOCK 1024
+#define GRID_DIMENSION 80
 
 // Patron de réduction vu en classe
 __global__ void kernel_sum_coarse(double* input, double* result, int size) {
@@ -146,7 +147,9 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   double ssxm = 0.0;
   double ssym = 0.0;
 
-  // SIMPLE REDUCTION PART 
+/******************************************************************/
+/* sum(x) and sum(y)
+/******************************************************************/
 
   // double result;
   double* xarray_d;
@@ -169,7 +172,7 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   // Pour la fraction de GPU V100
   int blockDim = THREADS_PER_BLOCK;
   int gridDim = (size + blockDim * COARSE_FACTOR * 2 - 1) / (blockDim * COARSE_FACTOR * 2);
-  // int gridDim = GRID_DIMENSION
+  // int gridDim = GRID_DIMENSION;
   int sharedSize = blockDim * sizeof(double);  // taille du tableau extern __shared__ double input_s[]
   kernel_sum_coarse<<<gridDim, blockDim, sharedSize>>>(xarray_d, result_d, size);
   cudaCheck(cudaDeviceSynchronize());
@@ -180,10 +183,10 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   cudaMemcpy(&sy, result_d, sizeof(double), cudaMemcpyDeviceToHost);
   cudaMemset(result_d, 0, sizeof(double));
 
-  // END OF SIMPLE REDUCTION PART
 
-  std::cout << "\nsx: " << sx << std::endl;
-  std::cout << "sy: " << sy << std::endl;
+/******************************************************************/
+/* sxxm, ssym, ssxym
+/******************************************************************/
 
   xmean = sx / size;
   ymean = sy / size;
@@ -204,7 +207,7 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   cudaMemset(result_d, 0, sizeof(double));
 
   // ssxym = reduction_two_dep(xarray, xmean, yarray, ymean, size);
-  kernel_sum_coarse_two_dep<<<gridDim, blockDim, sharedSize>>>(xarray_d, xmean_d, yarray_d, ymean_d, result_d, size);
+  kernel_sum_coarse_two_dep<<<gridDim, blockDim, 2*sharedSize>>>(xarray_d, xmean_d, yarray_d, ymean_d, result_d, size);
   cudaCheck(cudaDeviceSynchronize());
   cudaMemcpy(&ssxym, result_d, sizeof(double), cudaMemcpyDeviceToHost);
   cudaMemset(result_d, 0, sizeof(double));
@@ -243,7 +246,7 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   cudaFree(result_d);
 }
 
-
+// Only kept to pass the tests, not used in the fit function
 double FitCuda::reduction(double* array, int size) {
   double result;
   double* array_d;
