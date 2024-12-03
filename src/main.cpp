@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
   experiment_basic(data_x, data_y, num_points, 0, 1, 10, 2);
 
   // Sauvegarder les points
-  if (output.length() > 0){
+  if (output.length() > 0) {
     std::ofstream ofs(output);
     for (int i = 0; i < num_points; i++) {
       ofs << data_x[i] << " " << data_y[i] << "\n";
