@@ -48,7 +48,7 @@ __global__ void kernel_sum_coarse(double* input, double* result, int size) {
   }
 }
 
-__global__ void kernel_sum_coarse_one_dep(double* input, double* mean ,double* result, int size) {
+__global__ void kernel_sum_coarse_one_dep(double* input, double* mean, double* result, int size) {
   // mémoire partagée par le warp
   // doit être allouée au lancement
   // on obtient en pratique le début de cet espace
@@ -88,7 +88,8 @@ __global__ void kernel_sum_coarse_one_dep(double* input, double* mean ,double* r
   }
 }
 
-__global__ void kernel_sum_coarse_two_dep(double* xArray, double* xmean, double* yArray, double* ymean, double* result, int size) {
+__global__ void kernel_sum_coarse_two_dep(double* xArray, double* xmean, double* yArray, double* ymean, double* result,
+                                          int size) {
   // mémoire partagée par le warp
   // doit être allouée au lancement
   // on obtient en pratique le début de cet espace
@@ -147,9 +148,9 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   double ssxm = 0.0;
   double ssym = 0.0;
 
-/******************************************************************/
-/* sum(x) and sum(y)
-/******************************************************************/
+  /******************************************************************/
+  /* sum(x) and sum(y)
+  /******************************************************************/
 
   // double result;
   double* xarray_d;
@@ -183,10 +184,9 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   cudaMemcpy(&sy, result_d, sizeof(double), cudaMemcpyDeviceToHost);
   cudaMemset(result_d, 0, sizeof(double));
 
-
-/******************************************************************/
-/* sxxm, ssym, ssxym
-/******************************************************************/
+  /******************************************************************/
+  /* sxxm, ssym, ssxym
+  /******************************************************************/
 
   xmean = sx / size;
   ymean = sy / size;
@@ -207,7 +207,8 @@ void FitCuda::fit(double* xarray, double* yarray, int size, FitResult& res) {
   cudaMemset(result_d, 0, sizeof(double));
 
   // ssxym = reduction_two_dep(xarray, xmean, yarray, ymean, size);
-  kernel_sum_coarse_two_dep<<<gridDim, blockDim, 2*sharedSize>>>(xarray_d, xmean_d, yarray_d, ymean_d, result_d, size);
+  kernel_sum_coarse_two_dep<<<gridDim, blockDim, 2 * sharedSize>>>(xarray_d, xmean_d, yarray_d, ymean_d, result_d,
+                                                                   size);
   cudaCheck(cudaDeviceSynchronize());
   cudaMemcpy(&ssxym, result_d, sizeof(double), cudaMemcpyDeviceToHost);
   cudaMemset(result_d, 0, sizeof(double));
@@ -268,7 +269,6 @@ double FitCuda::reduction(double* array, int size) {
   return result;
 }
 
-
 // double FitCuda::reduction_one_dep(double* xArray, double xmean, int size) {
 //   double result;
 //   double* xArray_d;
@@ -292,4 +292,3 @@ double FitCuda::reduction(double* array, int size) {
 //   cudaMemcpy(&result, result_d, sizeof(double), cudaMemcpyDeviceToHost);
 //   return result;
 // }
-

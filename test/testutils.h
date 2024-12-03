@@ -10,9 +10,7 @@ namespace Catch {
 template <>
 struct StringMaker<FitResult> {
   static std::string convert(const FitResult& obj) {
-    return "(" + std::to_string(obj.a) + ", " +
-                 std::to_string(obj.b) + ", " +
-                 std::to_string(obj.r) + ")";
+    return "(" + std::to_string(obj.a) + ", " + std::to_string(obj.b) + ", " + std::to_string(obj.r) + ")";
   }
 };
 
